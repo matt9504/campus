@@ -103,6 +103,8 @@
 
 2. 내가 팔로우한 유저의 글을 우선적으로 볼 수 있다.
 
+</br>
+
 
 ## 웹 소켓 코드
 
@@ -146,6 +148,7 @@ socketConnect(roomid){
 
 ```javascript
 // 채팅방 확인 후 메시지 전송
+
 sendMessage(){
       const roomNo = this.temps.id
       const roomTitle = this.temps.title
@@ -167,4 +170,72 @@ sendMessage(){
       let MessageList = this.$refs.MessageList
       MessageList.scrollTo({ top: MessageList.scrollHeight, behavior: 'smooth' });
 
+```
+
+<br/>
+
+### SpringBoot
+
+</br>
+
+```java
+// 웹 소켓 연결 
+
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+	@Override
+	public void registerStompEndpoints(StompEndpointRegistry registry) {
+		registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+	}
+
+	@Override
+	public void configureMessageBroker(MessageBrokerRegistry registry) {
+		registry.setApplicationDestinationPrefixes("/pub"); // publisher : message-handling methods로 라우팅됨
+		registry.enableSimpleBroker("/sub"); // subscriber : topic으로 시작되는 메시지가 메세지브로커로 라우팅됨
+	}
+
+	@Override
+	public void configureClientInboundChannel(ChannelRegistration registration) {
+		registration.interceptors(new MyChannelInterceptor());
+	}
+}
+```
+
+<br/>
+
+```java
+// 웹 소켓 controller
+
+public class MessageController {
+	private final IMessageService messageService;
+	private final SimpMessagingTemplate template;
+
+	@MessageMapping("/message")
+	public void sendMessage(@Payload Message chatMessage) {
+		log.info("전달 메세지 : " + chatMessage);
+
+		messageService.insertMessage(chatMessage);
+		template.convertAndSend("/sub/" + chatMessage.getChatroomId(), chatMessage);
+	}
+}
+```
+
+</br>
+
+```java
+// 웹 소켓 메세지 전송
+
+public Message preSend(Message<?> message, MessageChannel channel) {
+		StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+		StompCommand command = accessor.getCommand();
+		if (command.compareTo(StompCommand.SUBSCRIBE) == 0) {
+			String destination = accessor.getDestination();
+			System.out.println("구독 주소 : " + destination);
+			System.out.println(message);
+		} else if (command.compareTo(StompCommand.CONNECT) == 0) {
+			System.out.println("사용자 연결");
+		} else if (command.compareTo(StompCommand.DISCONNECT) == 0) {
+			System.out.println("사용자 연결 해제");
+		}
+		return message;
+	}
 ```
