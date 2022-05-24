@@ -1,5 +1,9 @@
 
 # Campus
+</br>
+<p align="center"><img src="./asset/images/logo.png"></p>
+
+</br></br>
 
 ## 한 줄 소개
 
